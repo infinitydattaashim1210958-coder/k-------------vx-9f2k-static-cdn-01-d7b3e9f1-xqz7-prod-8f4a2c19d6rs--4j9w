@@ -1,16 +1,14 @@
+
 package com.cloudshelf.reader.feature.home
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Refresh
@@ -46,7 +44,10 @@ fun HomeScreen(
                 title = { Text("CloudShelf") },
                 actions = {
                     IconButton(onClick = { viewModel.refresh() }) {
-                        Icon(Icons.Default.Refresh, contentDescription = "Refresh catalogue")
+                        Icon(
+                            Icons.Default.Refresh,
+                            contentDescription = "Refresh catalogue"
+                        )
                     }
                 }
             )
@@ -60,48 +61,101 @@ fun HomeScreen(
                 .padding(padding)
         ) {
             when {
-                state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator()
+                    }
                 }
-                else -> LazyColumn(
-                    contentPadding = PaddingValues(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    state.syncState.lastError?.let { err ->
+
+                else -> {
+                    LazyColumn(
+                        contentPadding = PaddingValues(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        state.syncState.lastError?.let { err ->
+                            item {
+                                Text(
+                                    text = "Sync note: $err",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
+                        }
+
+                        // Continue Reading
+                        if (state.continueReading.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Continue Reading",
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+
+                            items(
+                                items = state.continueReading,
+                                key = { "continue:${it.first.id}" }
+                            ) { (book, _) ->
+                                BookCard(
+                                    book = book,
+                                    onClick = { onBookClick(book.id) }
+                                )
+                            }
+                        }
+
+                        // Featured
+                        if (state.featured.isNotEmpty()) {
+                            item {
+                                Text(
+                                    "Featured",
+                                    style = MaterialTheme.typography.titleLarge
+                                )
+                            }
+
+                            items(
+                                items = state.featured,
+                                key = { "featured:${it.id}" }
+                            ) { book ->
+                                BookCard(
+                                    book = book,
+                                    onClick = { onBookClick(book.id) }
+                                )
+                            }
+                        }
+
+                        // Library
                         item {
                             Text(
-                                text = "Sync note: $err",
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.error
+                                "Library",
+                                style = MaterialTheme.typography.titleLarge
                             )
                         }
-                    }
-                    if (state.continueReading.isNotEmpty()) {
-                        item { Text("Continue Reading", style = MaterialTheme.typography.titleLarge) }
-                        items(state.continueReading, key = { it.first.id }) { (book, _) ->
-                            BookCard(book = book, onClick = { onBookClick(book.id) })
+
+                        if (state.recentlyAdded.isEmpty()) {
+                            item {
+                                Text(
+                                    text = "No books yet. Upload PDFs to GitHub Releases and add entries to catalogue.json on the main branch.",
+                                    style = MaterialTheme.typography.bodyMedium
+                                )
+                            }
+                        } else {
+                            items(
+                                items = state.recentlyAdded,
+                                key = { "library:${it.id}" }
+                            ) { book ->
+                                BookCard(
+                                    book = book,
+                                    onClick = { onBookClick(book.id) }
+                                )
+                            }
                         }
-                    }
-                    if (state.featured.isNotEmpty()) {
-                        item { Text("Featured", style = MaterialTheme.typography.titleLarge) }
-                        items(state.featured, key = { it.id }) { book ->
-                            BookCard(book = book, onClick = { onBookClick(book.id) })
-                        }
-                    }
-                    item { Text("Library", style = MaterialTheme.typography.titleLarge) }
-                    if (state.recentlyAdded.isEmpty()) {
+
                         item {
-                            Text(
-                                "No books yet. Upload PDFs to GitHub Releases and add entries to catalogue.json on the main branch.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
-                        }
-                    } else {
-                        items(state.recentlyAdded, key = { it.id }) { book ->
-                            BookCard(book = book, onClick = { onBookClick(book.id) })
+                            Spacer(Modifier.height(24.dp))
                         }
                     }
-                    item { Spacer(Modifier.height(24.dp)) }
                 }
             }
         }

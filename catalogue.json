@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "catalogueVersion": "2026.11.20.1",
+  "lastUpdated": "2026-11-20T00:00:00Z",
+  "categories": [
+    {
+      "id": "general",
+      "name": "General",
+      "description": "General collection",
+      "coverUrl": null
+    }
+  ],
+  "books": []
+}

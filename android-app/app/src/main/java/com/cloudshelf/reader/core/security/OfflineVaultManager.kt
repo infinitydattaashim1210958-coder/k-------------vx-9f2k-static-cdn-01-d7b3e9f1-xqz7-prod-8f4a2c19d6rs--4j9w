@@ -26,7 +26,7 @@ class OfflineVaultManager @Inject constructor(
     @ApplicationContext private val context: Context,
     private val okHttpClient: OkHttpClient,
     private val validator: CatalogueValidator,
-    masterKeyWrapper: AndroidKeyStoreMasterKeyWrapper
+    masterKeyWrapper: MasterKeyWrapper
 ) {
     private val cryptoEngine = ChunkedPdfCryptoEngine(masterKeyWrapper)
 

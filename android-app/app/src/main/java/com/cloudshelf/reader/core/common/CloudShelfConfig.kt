@@ -12,14 +12,14 @@ object CloudShelfConfig {
 
     // Configurable catalogue URL: defaults to raw main branch path; can be overridden in Settings/DataStore
     const val DEFAULT_CATALOGUE_URL =
-        "https://githubusercontent.com"
+        "https://raw.githubusercontent.com/$REPO_OWNER/$REPO_NAME/$DEFAULT_BRANCH/catalogue.json"
 
     // Strict host allowlist to prevent SSRF or untrusted redirect targets
     val ALLOWED_HOSTS = setOf(
         "github.com",
-        "://githubusercontent.com",
-        "://githubusercontent.com",
-        "://githubusercontent.com"
+        "raw.githubusercontent.com",
+        "objects.githubusercontent.com",
+        "release-assets.githubusercontent.com"
     )
 
     const val SUPPORTED_CATALOGUE_SCHEMA_VERSION = 1

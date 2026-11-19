@@ -14,6 +14,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 import java.io.IOException
+import java.io.OutputStream
 import java.security.DigestInputStream
 import java.security.MessageDigest
 import javax.inject.Inject
@@ -29,7 +30,7 @@ class OfflineVaultManager @Inject constructor(
 ) {
     private val cryptoEngine = ChunkedPdfCryptoEngine(masterKeyWrapper)
 
-    // Excluded from cloud backup & device transfer via data_extraction_rules.xml
+    // noBackupFilesDir is automatically excluded from cloud backup & device transfer
     private val vaultDir = File(context.noBackupFilesDir, "offline_books").apply { mkdirs() }
     private val tempWorkDir = File(context.cacheDir, "offline_staging").apply { mkdirs() }
 
@@ -108,7 +109,7 @@ class OfflineVaultManager @Inject constructor(
                 val verifiedCount = cryptoEngine.decryptStream(
                     bookId = bookId,
                     input = verifyIn,
-                    output = java.io.OutputStream.nullOutputStream()
+                    output = DiscardingOutputStream
                 )
                 if (verifiedCount != tempPlainFile.length()) {
                     throw SecurityException("Post-encryption verification length mismatch")
@@ -166,4 +167,10 @@ class OfflineVaultManager @Inject constructor(
 
     private fun sanitizeBookId(bookId: String): String =
         bookId.replace(Regex("[^a-zA-Z0-9._-]"), "_")
+}
+
+/** API-26-safe replacement for OutputStream.nullOutputStream() (which needs API 33). */
+private object DiscardingOutputStream : OutputStream() {
+    override fun write(b: Int) = Unit
+    override fun write(b: ByteArray, off: Int, len: Int) = Unit
 }

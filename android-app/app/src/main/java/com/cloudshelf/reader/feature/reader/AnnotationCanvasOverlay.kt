@@ -9,7 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Modifier
+import androidx.compose.ui.Modifier.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
@@ -27,14 +27,18 @@ import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
 
+/**
+ * Overlay canvas for freehand and shape annotations.
+ * Coordinates are normalized [0..1] relative to the page bounds.
+ */
 @Composable
 fun AnnotationCanvasOverlay(
     activeTool: AnnotationTool,
-    activeColorArgb: Long,
-    activeAlpha: Float,
-    strokeWidthRatio: Float,
-    committedAnnotations: List<AnnotationPayload>,
-    onAnnotationCreated: (AnnotationPayload) -> Unit,
+    activeColor: Long = 0xFFFFEB3B,
+    activeStrokeWidth: Float = 4f,
+    activeAlpha: Float = 1f,
+    committedAnnotations: List<AnnotationPayload> = emptyList(),
+    onAnnotationCreated: (AnnotationPayload) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val activeStrokePoints = remember { mutableStateListOf<NormalizedPoint>() }
@@ -44,7 +48,7 @@ fun AnnotationCanvasOverlay(
     val gestureModifier = if (activeTool == AnnotationTool.NONE) {
         Modifier
     } else {
-        Modifier.pointerInput(activeTool, activeColorArgb, activeAlpha, strokeWidthRatio) {
+        Modifier.pointerInput(activeTool, activeColor, activeStrokeWidth, activeAlpha) {
             detectDragGestures(
                 onDragStart = { offset ->
                     val norm = NormalizedPoint(
@@ -57,17 +61,19 @@ fun AnnotationCanvasOverlay(
                     activeStrokePoints.add(norm)
                 },
                 onDrag = { change, _ ->
-                    change.consume()
                     val norm = NormalizedPoint(
                         x = (change.position.x / size.width).coerceIn(0f, 1f),
                         y = (change.position.y / size.height).coerceIn(0f, 1f)
                     )
                     dragCurrent = norm
-                    activeStrokePoints.add(norm)
+                    if (activeTool == AnnotationTool.PEN ||
+                        activeTool == AnnotationTool.PENCIL ||
+                        activeTool == AnnotationTool.HIGHLIGHTER_STROKE
+                    ) {
+                        activeStrokePoints.add(norm)
+                    }
                 },
                 onDragEnd = {
-                    val start = dragStart
-                    val end = dragCurrent
                     when (activeTool) {
                         AnnotationTool.PEN,
                         AnnotationTool.PENCIL,
@@ -76,36 +82,38 @@ fun AnnotationCanvasOverlay(
                                 onAnnotationCreated(
                                     AnnotationPayload.FreehandStroke(
                                         points = activeStrokePoints.toList(),
-                                        colorArgb = activeColorArgb,
-                                        strokeWidthRatio = strokeWidthRatio,
+                                        color = activeColor,
+                                        strokeWidth = activeStrokeWidth,
                                         alpha = if (activeTool == AnnotationTool.HIGHLIGHTER_STROKE) 0.35f else activeAlpha
                                     )
                                 )
                             }
+                            activeStrokePoints.clear()
                         }
                         AnnotationTool.RECTANGLE,
                         AnnotationTool.ELLIPSE,
                         AnnotationTool.LINE,
                         AnnotationTool.ARROW,
                         AnnotationTool.HIGHLIGHT_AREA -> {
+                            val start = dragStart
+                            val end = dragCurrent
                             if (start != null && end != null) {
                                 val isHighlight = activeTool == AnnotationTool.HIGHLIGHT_AREA
                                 onAnnotationCreated(
                                     AnnotationPayload.ShapeItem(
-                                        shapeType = activeTool.name,
+                                        shapeType = activeTool,
                                         start = start,
                                         end = end,
-                                        strokeColorArgb = activeColorArgb,
-                                        fillColorArgb = if (isHighlight) activeColorArgb else null,
-                                        strokeWidthRatio = strokeWidthRatio,
-                                        alpha = if (isHighlight) 0.35f else activeAlpha
+                                        strokeColor = activeColor,
+                                        fillColor = if (isHighlight) activeColor else null,
+                                        strokeWidth = activeStrokeWidth,
+                                        alpha = if (isHighlight) 0.3f else activeAlpha
                                     )
                                 )
                             }
                         }
                         else -> Unit
                     }
-                    activeStrokePoints.clear()
                     dragStart = null
                     dragCurrent = null
                 }
@@ -117,8 +125,7 @@ fun AnnotationCanvasOverlay(
         committedAnnotations.forEach { payload ->
             drawAnnotationPayload(payload)
         }
-
-        // Render live in-progress gesture
+        // In-progress freehand
         if (activeStrokePoints.size >= 2 &&
             (activeTool == AnnotationTool.PEN ||
                 activeTool == AnnotationTool.PENCIL ||
@@ -127,12 +134,16 @@ fun AnnotationCanvasOverlay(
             drawAnnotationPayload(
                 AnnotationPayload.FreehandStroke(
                     points = activeStrokePoints.toList(),
-                    colorArgb = activeColorArgb,
-                    strokeWidthRatio = strokeWidthRatio,
+                    color = activeColor,
+                    strokeWidth = activeStrokeWidth,
                     alpha = if (activeTool == AnnotationTool.HIGHLIGHTER_STROKE) 0.35f else activeAlpha
                 )
             )
-        } else if (dragStart != null && dragCurrent != null &&
+        }
+        // In-progress shape
+        val start = dragStart
+        val end = dragCurrent
+        if (start != null && end != null &&
             (activeTool == AnnotationTool.RECTANGLE ||
                 activeTool == AnnotationTool.ELLIPSE ||
                 activeTool == AnnotationTool.LINE ||
@@ -142,13 +153,13 @@ fun AnnotationCanvasOverlay(
             val isHighlight = activeTool == AnnotationTool.HIGHLIGHT_AREA
             drawAnnotationPayload(
                 AnnotationPayload.ShapeItem(
-                    shapeType = activeTool.name,
-                    start = dragStart!!,
-                    end = dragCurrent!!,
-                    strokeColorArgb = activeColorArgb,
-                    fillColorArgb = if (isHighlight) activeColorArgb else null,
-                    strokeWidthRatio = strokeWidthRatio,
-                    alpha = if (isHighlight) 0.35f else activeAlpha
+                    shapeType = activeTool,
+                    start = start,
+                    end = end,
+                    strokeColor = activeColor,
+                    fillColor = if (isHighlight) activeColor else null,
+                    strokeWidth = activeStrokeWidth,
+                    alpha = if (isHighlight) 0.3f else activeAlpha
                 )
             )
         }
@@ -159,96 +170,98 @@ private fun DrawScope.drawAnnotationPayload(payload: AnnotationPayload) {
     when (payload) {
         is AnnotationPayload.FreehandStroke -> {
             if (payload.points.size < 2) return
-            val path = Path().apply {
-                moveTo(payload.points[0].x * size.width, payload.points[0].y * size.height)
-                for (i in 1 until payload.points.size) {
-                    lineTo(payload.points[i].x * size.width, payload.points[i].y * size.height)
-                }
+            val path = Path()
+            val first = payload.points.first()
+            path.moveTo(first.x * size.width, first.y * size.height)
+            payload.points.drop(1).forEach { p ->
+                path.lineTo(p.x * size.width, p.y * size.height)
             }
             drawPath(
                 path = path,
-                color = Color(payload.colorArgb).copy(alpha = payload.alpha),
+                color = Color(payload.color).copy(alpha = payload.alpha),
                 style = Stroke(
-                    width = (payload.strokeWidthRatio * size.width).coerceAtLeast(2f),
+                    width = payload.strokeWidth,
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round
                 )
             )
         }
-
         is AnnotationPayload.ShapeItem -> {
-            val left = min(payload.start.x, payload.end.x) * size.width
-            val top = min(payload.start.y, payload.end.y) * size.height
-            val width = kotlin.math.abs(payload.end.x - payload.start.x) * size.width
-            val height = kotlin.math.abs(payload.end.y - payload.start.y) * size.height
-            val strokeColor = Color(payload.strokeColorArgb).copy(alpha = payload.alpha)
-            val strokePx = (payload.strokeWidthRatio * size.width).coerceAtLeast(2f)
+            val x0 = payload.start.x * size.width
+            val y0 = payload.start.y * size.height
+            val x1 = payload.end.x * size.width
+            val y1 = payload.end.y * size.height
+            val left = min(x0, x1)
+            val top = min(y0, y1)
+            val w = kotlin.math.abs(x1 - x0)
+            val h = kotlin.math.abs(y1 - y0)
+            val strokeColor = Color(payload.strokeColor).copy(alpha = payload.alpha)
+            val fillColor = payload.fillColor?.let { Color(it).copy(alpha = payload.alpha) }
 
             when (payload.shapeType) {
-                AnnotationTool.RECTANGLE.name,
-                AnnotationTool.HIGHLIGHT_AREA.name -> {
-                    payload.fillColorArgb?.let { fill ->
-                        drawRect(
-                            color = Color(fill).copy(alpha = payload.alpha),
-                            topLeft = Offset(left, top),
-                            size = Size(width, height)
-                        )
+                AnnotationTool.RECTANGLE, AnnotationTool.HIGHLIGHT_AREA -> {
+                    if (fillColor != null) {
+                        drawRect(color = fillColor, topLeft = Offset(left, top), size = Size(w, h))
                     }
-                    if (payload.shapeType == AnnotationTool.RECTANGLE.name) {
-                        drawRect(
-                            color = strokeColor,
-                            topLeft = Offset(left, top),
-                            size = Size(width, height),
-                            style = Stroke(width = strokePx)
-                        )
-                    }
+                    drawRect(
+                        color = strokeColor,
+                        topLeft = Offset(left, top),
+                        size = Size(w, h),
+                        style = Stroke(width = payload.strokeWidth)
+                    )
                 }
-                AnnotationTool.ELLIPSE.name -> {
+                AnnotationTool.ELLIPSE -> {
+                    if (fillColor != null) {
+                        drawOval(color = fillColor, topLeft = Offset(left, top), size = Size(w, h))
+                    }
                     drawOval(
                         color = strokeColor,
                         topLeft = Offset(left, top),
-                        size = Size(width, height),
-                        style = Stroke(width = strokePx)
+                        size = Size(w, h),
+                        style = Stroke(width = payload.strokeWidth)
                     )
                 }
-                AnnotationTool.LINE.name,
-                AnnotationTool.ARROW.name -> {
-                    val p1 = Offset(payload.start.x * size.width, payload.start.y * size.height)
-                    val p2 = Offset(payload.end.x * size.width, payload.end.y * size.height)
+                AnnotationTool.LINE -> {
                     drawLine(
                         color = strokeColor,
-                        start = p1,
-                        end = p2,
-                      strokeWidth = strokePx,
-cap = StrokeCap.Round
-)
-if (payload.shapeType == AnnotationTool.ARROW.name) {
-val angle = atan2((p2.y - p1.y).toDouble(), (p2.x - p1.x).toDouble())
-val headLen = strokePx * 4f
-val wing1 = Offset(
-(p2.x - headLen * cos(angle - Math.PI / 6)).toFloat(),
-(p2.y - headLen * sin(angle - Math.PI / 6)).toFloat()
-)
-val wing2 = Offset(
-(p2.x - headLen * cos(angle + Math.PI / 6)).toFloat(),
-(p2.y - headLen * sin(angle + Math.PI / 6)).toFloat()
-)
-drawLine(strokeColor, p2, wing1, strokePx, StrokeCap.Round)
-drawLine(strokeColor, p2, wing2, strokePx, StrokeCap.Round)
-}
-}
-}
-}
-is AnnotationPayload.CommentPinItem -> {
-val center = Offset(payload.anchor.x * size.width, payload.anchor.y * size.height)
-drawCircle(
-color = Color(payload.colorArgb),
-radius = 18f,
-center = center
-)
-}
-is AnnotationPayload.TextBoxItem -> {
-// TextBox composables are positioned interactively over the page bounds
-}
-}
+                        start = Offset(x0, y0),
+                        end = Offset(x1, y1),
+                        strokeWidth = payload.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
+                AnnotationTool.ARROW -> {
+                    drawLine(
+                        color = strokeColor,
+                        start = Offset(x0, y0),
+                        end = Offset(x1, y1),
+                        strokeWidth = payload.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    val angle = atan2(y1 - y0, x1 - x0)
+                    val arrowLen = 16f
+                    val a1 = angle + Math.PI * 0.85
+                    val a2 = angle - Math.PI * 0.85
+                    drawLine(
+                        color = strokeColor,
+                        start = Offset(x1, y1),
+                        end = Offset(x1 + (arrowLen * cos(a1)).toFloat(), y1 + (arrowLen * sin(a1)).toFloat()),
+                        strokeWidth = payload.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                    drawLine(
+                        color = strokeColor,
+                        start = Offset(x1, y1),
+                        end = Offset(x1 + (arrowLen * cos(a2)).toFloat(), y1 + (arrowLen * sin(a2)).toFloat()),
+                        strokeWidth = payload.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
+                else -> Unit
+            }
+        }
+        is AnnotationPayload.TextItem -> {
+            // Text rendering requires native canvas; shapes/strokes are primary for now.
+        }
+    }
 }

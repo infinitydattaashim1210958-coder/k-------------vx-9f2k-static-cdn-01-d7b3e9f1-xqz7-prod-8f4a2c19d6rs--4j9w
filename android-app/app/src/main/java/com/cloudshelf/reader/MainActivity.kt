@@ -4,8 +4,6 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Category
@@ -15,21 +13,29 @@ import androidx.compose.material.icons.filled.LibraryBooks
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.cloudshelf.reader.feature.bookdetail.BookDetailScreen
+import com.cloudshelf.reader.feature.categories.CategoriesScreen
+import com.cloudshelf.reader.feature.home.HomeScreen
+import com.cloudshelf.reader.feature.library.LibraryScreen
+import com.cloudshelf.reader.feature.offline.OfflineScreen
+import com.cloudshelf.reader.feature.reader.PdfReaderScreen
+import com.cloudshelf.reader.feature.search.SearchScreen
+import com.cloudshelf.reader.feature.settings.SettingsScreen
+import com.cloudshelf.reader.ui.theme.CloudShelfTheme
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -38,10 +44,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            MaterialTheme {
-                Surface(modifier = Modifier.fillMaxSize()) {
-                    CloudShelfRootScreen()
-                }
+            CloudShelfTheme {
+                CloudShelfRootScreen()
             }
         }
     }
@@ -61,23 +65,26 @@ fun CloudShelfRootScreen() {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = backStackEntry?.destination?.route
+    val showBottomBar = currentRoute in TopDestination.entries.map { it.route }
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                TopDestination.entries.forEach { dest ->
-                    NavigationBarItem(
-                        selected = currentRoute == dest.route,
-                        onClick = {
-                            navController.navigate(dest.route) {
-                                popUpTo(TopDestination.HOME.route) { saveState = true }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        },
-                        icon = { Icon(dest.icon, contentDescription = dest.label) },
-                        label = { Text(dest.label, maxLines = 1) }
-                    )
+            if (showBottomBar) {
+                NavigationBar {
+                    TopDestination.entries.forEach { dest ->
+                        NavigationBarItem(
+                            selected = currentRoute == dest.route,
+                            onClick = {
+                                navController.navigate(dest.route) {
+                                    popUpTo(TopDestination.HOME.route) { saveState = true }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
+                            },
+                            icon = { Icon(dest.icon, contentDescription = dest.label) },
+                            label = { Text(dest.label, maxLines = 1) }
+                        )
+                    }
                 }
             }
         }
@@ -87,12 +94,46 @@ fun CloudShelfRootScreen() {
             startDestination = TopDestination.HOME.route,
             modifier = Modifier.padding(innerPadding)
         ) {
-            TopDestination.entries.forEach { dest ->
-                composable(dest.route) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text(text = "CloudShelf — ${dest.label}", style = MaterialTheme.typography.headlineSmall)
+            composable(TopDestination.HOME.route) {
+                HomeScreen(onBookClick = { id -> navController.navigate("book/$id") })
+            }
+            composable(TopDestination.CATEGORIES.route) {
+                CategoriesScreen()
+            }
+            composable(TopDestination.SEARCH.route) {
+                SearchScreen(onBookClick = { id -> navController.navigate("book/$id") })
+            }
+            composable(TopDestination.LIBRARY.route) {
+                LibraryScreen(onBookClick = { id -> navController.navigate("book/$id") })
+            }
+            composable(TopDestination.OFFLINE.route) {
+                OfflineScreen(onBookClick = { id -> navController.navigate("reader/$id?offline=true") })
+            }
+            composable(TopDestination.SETTINGS.route) {
+                SettingsScreen()
+            }
+            composable(
+                route = "book/{bookId}",
+                arguments = listOf(navArgument("bookId") { type = NavType.StringType })
+            ) {
+                BookDetailScreen(
+                    onRead = { id, offline ->
+                        navController.navigate("reader/$id?offline=$offline")
+                    },
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(
+                route = "reader/{bookId}?offline={offline}",
+                arguments = listOf(
+                    navArgument("bookId") { type = NavType.StringType },
+                    navArgument("offline") {
+                        type = NavType.BoolType
+                        defaultValue = false
                     }
-                }
+                )
+            ) {
+                PdfReaderScreen(onBack = { navController.popBackStack() })
             }
         }
     }

@@ -2,59 +2,113 @@ package com.cloudshelf.reader.domain.model
 
 import kotlinx.serialization.Serializable
 
+/**
+ * All annotation coordinates are normalized to PDF page space [0..1]
+ * (origin top-left) so they remain correct across zoom, rotation and density.
+ */
+@Serializable
+data class HighlightPayload(
+    val pageWidthNorm: Float = 1f,
+    val pageHeightNorm: Float = 1f,
+    val rects: List<NormRect>,
+    val colorArgb: Long,
+    val selectedText: String? = null
+)
+
+@Serializable
+data class DrawingPayload(
+    val strokes: List<Stroke>,
+    val colorArgb: Long,
+    val strokeWidth: Float,
+    val opacity: Float = 1f
+)
+
+@Serializable
+data class ShapePayload(
+    val shapeType: String, // RECT, ELLIPSE, LINE, ARROW
+    val start: NormPoint,
+    val end: NormPoint,
+    val strokeColorArgb: Long,
+    val fillColorArgb: Long? = null,
+    val strokeWidth: Float,
+    val opacity: Float = 1f
+)
+
+@Serializable
+data class TextBoxPayload(
+    val topLeft: NormPoint,
+    val widthNorm: Float,
+    val heightNorm: Float,
+    val text: String,
+    val fontSizeSp: Float,
+    val textColorArgb: Long,
+    val backgroundColorArgb: Long? = null,
+    val alignment: String = "LEFT"
+)
+
+@Serializable
+data class CommentPayload(
+    val anchor: NormPoint,
+    val text: String
+)
+
+@Serializable
+data class NormRect(
+    val left: Float,
+    val top: Float,
+    val right: Float,
+    val bottom: Float
+)
+
+@Serializable
+data class NormPoint(val x: Float, val y: Float)
+
+@Serializable
+data class Stroke(
+    val points: List<NormPoint>,
+    val width: Float,
+    val colorArgb: Long,
+    val opacity: Float = 1f
+)
+
+/* Compatibility aliases used by AnnotationCanvasOverlay */
+typealias NormalizedPoint = NormPoint
+
 enum class AnnotationTool {
     NONE,
-    HIGHLIGHT_AREA,
     PEN,
     PENCIL,
     HIGHLIGHTER_STROKE,
-    ERASER,
+    HIGHLIGHT_AREA,
     RECTANGLE,
     ELLIPSE,
     LINE,
     ARROW,
     TEXT_BOX,
-    COMMENT_PIN
+    ERASER
 }
 
-@Serializable
-data class NormalizedPoint(val x: Float, val y: Float)
-
-@Serializable
 sealed class AnnotationPayload {
-    @Serializable
     data class FreehandStroke(
         val points: List<NormalizedPoint>,
-        val colorArgb: Long,
-        val strokeWidthRatio: Float,
-        val alpha: Float
+        val color: Long,
+        val strokeWidth: Float,
+        val alpha: Float = 1f
     ) : AnnotationPayload()
 
-    @Serializable
     data class ShapeItem(
-        val shapeType: String, // RECTANGLE, ELLIPSE, LINE, ARROW, HIGHLIGHT_AREA
+        val shapeType: AnnotationTool,
         val start: NormalizedPoint,
         val end: NormalizedPoint,
-        val strokeColorArgb: Long,
-        val fillColorArgb: Long?,
-        val strokeWidthRatio: Float,
-        val alpha: Float
+        val strokeColor: Long,
+        val fillColor: Long? = null,
+        val strokeWidth: Float,
+        val alpha: Float = 1f
     ) : AnnotationPayload()
 
-    @Serializable
-    data class TextBoxItem(
+    data class TextItem(
         val topLeft: NormalizedPoint,
-        val bottomRight: NormalizedPoint,
         val text: String,
-        val textColorArgb: Long,
-        val backgroundColorArgb: Long,
-        val fontSizeSp: Float
-    ) : AnnotationPayload()
-
-    @Serializable
-    data class CommentPinItem(
-        val anchor: NormalizedPoint,
-        val commentText: String,
-        val colorArgb: Long
+        val color: Long
     ) : AnnotationPayload()
 }

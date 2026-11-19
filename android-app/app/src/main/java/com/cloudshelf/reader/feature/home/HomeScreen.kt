@@ -101,7 +101,7 @@ fun HomeScreen(
                             BookCard(book = book, onClick = { onBookClick(book.id) })
                         }
                     }
-                    Spacer(Modifier.height(24.dp))
+                    item { Spacer(Modifier.height(24.dp)) }
                 }
             }
         }

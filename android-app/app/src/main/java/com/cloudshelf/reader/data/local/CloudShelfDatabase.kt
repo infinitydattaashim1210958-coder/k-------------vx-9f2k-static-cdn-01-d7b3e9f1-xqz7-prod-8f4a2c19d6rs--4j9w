@@ -94,7 +94,7 @@ interface UserActivityDao {
     fun observeOfflineBook(bookId: String): Flow<OfflineBookEntity?>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertOfflineBook(entity:_OfflineBookEntity)
+    suspend fun upsertOfflineBook(entity: OfflineBookEntity)
 
     @Query("DELETE FROM offline_books WHERE bookId = :bookId")
     suspend fun deleteOfflineBookRecord(bookId: String)

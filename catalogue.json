@@ -4,11 +4,42 @@
   "lastUpdated": "2026-11-20T00:00:00Z",
   "categories": [
     {
-      "id": "general",
-      "name": "General",
-      "description": "General collection",
-      "coverUrl": null
+  "id": "satyartha-prakash-proshnottori",
+  "title": "সত্যার্থ-প্রকাশ প্রশ্নোত্তরী",
+  "authors": ["শ্রী দীপংকর সিংহ দীপ"],
+  "description": "মহর্ষি দয়ানন্দ সরস্বতী প্রণীত সত্যার্থ প্রকাশ গ্রন্থের প্রথম দশ সমুল্লাসের উপর ভিত্তি করে রচিত প্রশ্নোত্তর সংকলন।",
+  "categoryIds": ["general"],
+  "language": "bn",
+  "coverUrl": null,
+  "releaseTag": "1.1.2",
+  "assetName": "satyartha-prakash-proshnottori.pdf",
+  "downloadUrl": "https://github.com/infinitydattaashim1210958-coder/k-------------vx-9f2k-static-cdn-01-d7b3e9f1-xqz7-prod-8f4a2c19d6rs--4j9w/releases/download/1.1.2/satyartha-prakash-proshnottori.pdf",
+  "fileSize": 6119278,
+  "sha256": "db4580864be732991ea2a7255e3e563606de8e85a731e897ecd06920f51c4f69",
+  "pageCount": 190,
+  "publishedAt": "2026-11-20",
+  "featured": true,
+  "tags": ["বাংলা", "বৈদিক সাহিত্য", "প্রশ্নোত্তর"]
     }
   ],
-  "books": []
+  "books": [
+  {
+    "id": "satyartha-prakash-proshnottori",
+    "title": "সত্যার্থ-প্রকাশ প্রশ্নোত্তরী",
+    "authors": ["শ্রী দীপংকর সিংহ দীপ"],
+    "description": "মহর্ষি দয়ানন্দ সরস্বতী প্রণীত সত্যার্থ প্রকাশ গ্রন্থের প্রথম দশ সমুল্লাসের উপর ভিত্তি করে রচিত প্রশ্নোত্তর সংকলন।",
+    "categoryIds": ["general"],
+    "language": "bn",
+    "coverUrl": null,
+    "releaseTag": "1.1.2",
+    "assetName": "satyartha-prakash-proshnottori.pdf",
+    "downloadUrl": "https://github.com/infinitydattaashim1210958-coder/k-------------vx-9f2k-static-cdn-01-d7b3e9f1-xqz7-prod-8f4a2c19d6rs--4j9w/releases/download/1.1.2/satyartha-prakash-proshnottori.pdf",
+    "fileSize": 6119278,
+    "sha256": "db4580864be732991ea2a7255e3e563606de8e85a731e897ecd06920f51c4f69",
+    "pageCount": 190,
+    "publishedAt": "2026-11-20",
+    "featured": true,
+    "tags": ["বাংলা", "বৈদিক সাহিত্য", "প্রশ্নোত্তর"]
+  }
+     ]
 }

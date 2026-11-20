@@ -1,5 +1,6 @@
 package com.cloudshelf.reader.data.repository
 
+import com.cloudshelf.reader.data.local.ReaderPreferenceEntity
 import com.cloudshelf.reader.data.local.UserActivityDao
 import com.cloudshelf.reader.domain.model.AnnotationItem
 import com.cloudshelf.reader.domain.model.Bookmark
@@ -15,9 +16,11 @@ import javax.inject.Singleton
 class UserActivityRepositoryImpl @Inject constructor(
     private val dao: UserActivityDao
 ) : UserActivityRepository {
-
     override fun observeProgress(bookId: String): Flow<ReadingProgress?> =
         dao.observeProgress(bookId).map { it?.toDomain() }
+
+    override suspend fun getProgressOnce(bookId: String): ReadingProgress? =
+        dao.getProgressOnce(bookId)?.toDomain()
 
     override fun observeRecentlyRead(): Flow<List<ReadingProgress>> =
         dao.observeRecentlyRead().map { list -> list.map { it.toDomain() } }
@@ -31,6 +34,10 @@ class UserActivityRepositoryImpl @Inject constructor(
 
     override suspend fun addBookmark(bookmark: Bookmark) {
         dao.insertBookmark(bookmark.toEntity())
+    }
+
+    override suspend fun updateBookmark(id: Long, label: String, note: String?) {
+        dao.updateBookmark(id, label, note)
     }
 
     override suspend fun deleteBookmark(id: Long) {
@@ -63,5 +70,12 @@ class UserActivityRepositoryImpl @Inject constructor(
 
     override suspend fun removeOfflineRecord(bookId: String) {
         dao.deleteOfflineBookRecord(bookId)
+    }
+
+    override fun observeReaderPreference(scopeKey: String): Flow<ReaderPreferenceEntity?> =
+        dao.observeReaderPreference(scopeKey)
+
+    override suspend fun saveReaderPreference(pref: ReaderPreferenceEntity) {
+        dao.upsertReaderPreference(pref)
     }
 }

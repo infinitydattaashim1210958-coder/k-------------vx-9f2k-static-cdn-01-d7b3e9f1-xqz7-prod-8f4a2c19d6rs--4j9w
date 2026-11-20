@@ -2,14 +2,19 @@ package com.cloudshelf.reader.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.work.WorkManager
+import com.cloudshelf.reader.core.engine.ComicDocumentEngine
+import com.cloudshelf.reader.core.engine.DocumentEngineRegistry
+import com.cloudshelf.reader.core.engine.EpubDocumentEngine
+import com.cloudshelf.reader.core.engine.ImageDocumentEngine
+import com.cloudshelf.reader.core.engine.MarkdownDocumentEngine
+import com.cloudshelf.reader.core.engine.PdfDocumentEngine
 import com.cloudshelf.reader.core.security.AndroidKeyStoreMasterKeyWrapper
 import com.cloudshelf.reader.core.security.ChunkedPdfCryptoEngine
 import com.cloudshelf.reader.core.security.MasterKeyWrapper
-import com.cloudshelf.reader.core.security.OfflineVaultManager
 import com.cloudshelf.reader.data.local.CloudShelfDatabase
 import com.cloudshelf.reader.data.local.LibraryDao
 import com.cloudshelf.reader.data.local.UserActivityDao
-import com.cloudshelf.reader.data.remote.CatalogueRemoteDataSource
 import com.cloudshelf.reader.data.remote.CatalogueValidator
 import com.cloudshelf.reader.data.repository.LibraryRepositoryImpl
 import com.cloudshelf.reader.data.repository.UserActivityRepositoryImpl
@@ -21,7 +26,6 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
-import androidx.work.WorkManager
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 import javax.inject.Singleton
@@ -54,7 +58,7 @@ object AppModule {
             CloudShelfDatabase::class.java,
             "cloudshelf_db"
         )
-            .fallbackToDestructiveMigrationOnDowngrade()
+            .addMigrations(CloudShelfDatabase.MIGRATION_1_2)
             .build()
     }
 
@@ -78,8 +82,18 @@ object AppModule {
     @Singleton
     fun provideWorkManager(@ApplicationContext context: Context): WorkManager =
         WorkManager.getInstance(context)
-}
 
+    @Provides
+    fun provideDocumentEngineRegistry(@ApplicationContext context: Context): DocumentEngineRegistry {
+        return DocumentEngineRegistry(
+            pdfFactory = { PdfDocumentEngine() },
+            epubFactory = { EpubDocumentEngine(context) },
+            comicFactory = { ComicDocumentEngine(context) },
+            markdownFactory = { MarkdownDocumentEngine() },
+            imageFactory = { ImageDocumentEngine() }
+        )
+    }
+}
 
 @Module
 @InstallIn(SingletonComponent::class)

@@ -17,7 +17,7 @@
       "title": "সত্যার্থ-প্রকাশ প্রশ্নোত্তরী",
       "authors": ["শ্রী দীপংকর সিংহ দীপ"],
       "description": "মহর্ষি দয়ানন্দ সরস্বতী প্রণীত সত্যার্থ প্রকাশ গ্রন্থের প্রথম দশ সমুল্লাসের উপর ভিত্তি করে রচিত প্রশ্নোত্তর সংকলন।",
-      "categoryIds": ["general"],
+      "categoryIds": ["স্বাধ্যায় প্রকাশনী"],
       "language": "bn",
       "coverUrl": null,
       "releaseTag": "1.1.2",
@@ -29,6 +29,24 @@
       "publishedAt": "2026-11-20",
       "featured": true,
       "tags": ["বাংলা", "বৈদিক সাহিত্য", "প্রশ্নোত্তর"]
+    },
+    {
+      "id": "vol-21",
+      "title": "তিন গোয়েন্দা- ভলিউম-২১",
+      "authors": ["রকিব হাসান"],
+      "description": "তিন গোয়েন্দা সিরিজের ভলিউম-২১",
+      "categoryIds": ["তিন গোয়েন্দা"],
+      "language": "bn",
+      "coverUrl": null,
+      "releaseTag": "1.1.2",
+      "assetName": "vol-21.pdf",
+      "downloadUrl": "https://github.com/infinitydattaashim1210958-coder/k-------------vx-9f2k-static-cdn-01-d7b3e9f1-xqz7-prod-8f4a2c19d6rs--4j9w/releases/download/1.1.2/vol-21.pdf",
+      "fileSize": 9950000,
+      "sha256": "30529afbd9b6f530f3458d975fe73adfd35ff70ab98cf491295854325d57e4cd",
+      "pageCount": 252,
+      "publishedAt": "2026-11-21",
+      "featured": true,
+      "tags": ["বাংলা", "র‍‌‍হস্য", "তিন গোয়েন্দা"]
     }
   ]
 }

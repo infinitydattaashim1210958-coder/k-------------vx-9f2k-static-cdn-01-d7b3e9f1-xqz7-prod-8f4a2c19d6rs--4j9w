@@ -1,7 +1,6 @@
 package com.cloudshelf.reader.data.local
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -73,8 +72,8 @@ data class AnnotationEntity(
     @PrimaryKey val id: String,
     val bookId: String,
     val pageNumber: Int,
-    val type: String, // HIGHLIGHT, DRAWING, SHAPE, TEXT_BOX, COMMENT
-    val payloadJson: String, // Normalized [0..1] PDF coordinates, stroke paths, colors, text
+    val type: String,
+    val payloadJson: String,
     val note: String?,
     val updatedAtEpochMs: Long
 )
@@ -82,9 +81,21 @@ data class AnnotationEntity(
 @Entity(tableName = "offline_books")
 data class OfflineBookEntity(
     @PrimaryKey val bookId: String,
-    val status: String, // QUEUED, DOWNLOADING, VERIFIED, FAILED
+    val status: String,
     val encryptedFileName: String,
     val expectedSha256: String,
     val verifiedBytes: Long,
     val lastVerifiedEpochMs: Long
+)
+
+@Entity(tableName = "reader_preferences")
+data class ReaderPreferenceEntity(
+    @PrimaryKey val scopeKey: String, // "global" or specific bookId
+    val layoutMode: String,
+    val zoomMode: String,
+    val readerTheme: String,
+    val pageSpacingDp: Int,
+    val rotationDegrees: Int,
+    val speechRate: Float,
+    val updatedAtEpochMs: Long
 )

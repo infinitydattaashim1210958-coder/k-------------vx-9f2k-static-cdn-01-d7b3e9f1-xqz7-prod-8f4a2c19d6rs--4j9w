@@ -3,8 +3,8 @@ package com.cloudshelf.reader.domain.model
 import kotlinx.serialization.Serializable
 
 /**
- * All annotation coordinates are normalized to PDF page space [0..1]
- * (origin top-left) so they remain correct across zoom, rotation and density.
+ * Canonical annotation schema normalized to PDF page space [0..1]
+ * (origin top-left) so annotations remain accurate across zoom, rotation, and density.
  */
 @Serializable
 data class HighlightPayload(
@@ -25,7 +25,7 @@ data class DrawingPayload(
 
 @Serializable
 data class ShapePayload(
-    val shapeType: String, // RECT, ELLIPSE, LINE, ARROW
+    val shapeType: String, // RECT, ELLIPSE, LINE, ARROW, HIGHLIGHT_AREA
     val start: NormPoint,
     val end: NormPoint,
     val strokeColorArgb: Long,
@@ -53,6 +53,13 @@ data class CommentPayload(
 )
 
 @Serializable
+data class StampPayload(
+    val anchor: NormPoint,
+    val label: String,
+    val colorArgb: Long
+)
+
+@Serializable
 data class NormRect(
     val left: Float,
     val top: Float,
@@ -71,31 +78,40 @@ data class Stroke(
     val opacity: Float = 1f
 )
 
-/* Compatibility aliases used by AnnotationCanvasOverlay */
 typealias NormalizedPoint = NormPoint
 
 enum class AnnotationTool {
     NONE,
+    SELECT,
     PEN,
     PENCIL,
     HIGHLIGHTER_STROKE,
     HIGHLIGHT_AREA,
+    UNDERLINE,
+    STRIKEOUT,
+    SQUIGGLY,
     RECTANGLE,
     ELLIPSE,
     LINE,
     ARROW,
     TEXT_BOX,
+    POPUP_NOTE,
+    STAMP,
     ERASER
 }
 
+@Serializable
 sealed class AnnotationPayload {
+    @Serializable
     data class FreehandStroke(
         val points: List<NormalizedPoint>,
         val color: Long,
         val strokeWidth: Float,
-        val alpha: Float = 1f
+        val alpha: Float = 1f,
+        val tool: AnnotationTool = AnnotationTool.PEN
     ) : AnnotationPayload()
 
+    @Serializable
     data class ShapeItem(
         val shapeType: AnnotationTool,
         val start: NormalizedPoint,
@@ -106,9 +122,45 @@ sealed class AnnotationPayload {
         val alpha: Float = 1f
     ) : AnnotationPayload()
 
+    @Serializable
     data class TextItem(
         val topLeft: NormalizedPoint,
+        val widthNorm: Float = 0.28f,
+        val heightNorm: Float = 0.08f,
         val text: String,
-        val color: Long
+        val color: Long,
+        val fontSizeSp: Float = 14f,
+        val backgroundColor: Long? = 0xEEFFF8DC
+    ) : AnnotationPayload()
+
+    @Serializable
+    data class PopupNoteItem(
+        val anchor: NormalizedPoint,
+        val text: String,
+        val color: Long = 0xFFF59E0B
+    ) : AnnotationPayload()
+
+    @Serializable
+    data class StampItem(
+        val anchor: NormalizedPoint,
+        val label: String,
+        val color: Long = 0xFFDC2626
     ) : AnnotationPayload()
 }
+
+@Serializable
+data class RenderedAnnotation(
+    val id: String,
+    val bookId: String,
+    val pageNumber: Int,
+    val payload: AnnotationPayload,
+    val updatedAtEpochMs: Long = System.currentTimeMillis()
+)
+
+@Serializable
+data class AnnotationExportBundle(
+    val schemaVersion: Int = 1,
+    val app: String = "CloudShelf",
+    val bookId: String,
+    val annotations: List<RenderedAnnotation>
+)

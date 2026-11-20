@@ -41,32 +41,35 @@ class ComicDocumentEngine(private val context: Context) : DocumentEngine {
 
     override val pageCount: Int get() = pages.size
 
-    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) = withContext(Dispatchers.IO) {
-        pfd = descriptor
-        title = titleHint
-        pages.clear()
-        val entries = mutableListOf<Pair<String, ByteArray>>()
-        ZipInputStream(FileInputStream(descriptor.fileDescriptor)).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                val name = entry.name.lowercase()
-                if (!entry.isDirectory && (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp"))) {
-                    entries.add(entry.name to zip.readBytes())
+    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) {
+        withContext(Dispatchers.IO) {
+            pfd = descriptor
+            title = titleHint
+            pages.clear()
+            val entries = mutableListOf<Pair<String, ByteArray>>()
+            ZipInputStream(FileInputStream(descriptor.fileDescriptor)).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val name = entry.name.lowercase()
+                    if (!entry.isDirectory && (name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".png") || name.endsWith(".webp"))) {
+                        entries.add(entry.name to zip.readBytes())
+                    }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
             }
+            entries.sortBy { it.first }
+            pages.addAll(entries.map { it.second })
         }
-        entries.sortBy { it.first }
-        pages.addAll(entries.map { it.second })
     }
 
     override suspend fun getMetadata(): DocumentMetadata =
         DocumentMetadata(title = title, format = DocumentFormat.CBZ, pageCount = pageCount)
 
     override suspend fun getPageInfo(pageIndex: Int): DocumentPageInfo {
+        if (pages.isEmpty()) return DocumentPageInfo(pageIndex, 800, 1200)
         val opts = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        val bytes = pages[pageIndex.coerceIn(0, (pageCount - 1).coerceAtLeast(0))]
+        val bytes = pages[pageIndex.coerceIn(0, pageCount - 1)]
         BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
         return DocumentPageInfo(pageIndex, opts.outWidth.coerceAtLeast(1), opts.outHeight.coerceAtLeast(1))
     }
@@ -125,11 +128,13 @@ class ImageDocumentEngine : DocumentEngine {
 
     override val pageCount: Int get() = if (imageBytes != null) 1 else 0
 
-    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) = withContext(Dispatchers.IO) {
-        pfd = descriptor
-        title = titleHint
-        FileInputStream(descriptor.fileDescriptor).use { input ->
-            imageBytes = input.readBytes()
+    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) {
+        withContext(Dispatchers.IO) {
+            pfd = descriptor
+            title = titleHint
+            FileInputStream(descriptor.fileDescriptor).use { input ->
+                imageBytes = input.readBytes()
+            }
         }
     }
 
@@ -193,24 +198,26 @@ class MarkdownDocumentEngine : DocumentEngine {
 
     override val pageCount: Int get() = pageTexts.size
 
-    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) = withContext(Dispatchers.IO) {
-        pfd = descriptor
-        title = titleHint
-        val raw = FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() }
-        pageTexts.clear()
-        outlineNodes.clear()
-        val lines = raw.lines()
-        val chunkSize = 42
-        lines.chunked(chunkSize).forEachIndexed { idx, chunk ->
-            pageTexts.add(chunk.joinToString("\n"))
-            chunk.filter { it.startsWith("#") }.forEachIndexed { hIdx, heading ->
-                val cleanHeading = heading.trimStart('#', ' ')
-                if (cleanHeading.isNotBlank()) {
-                    outlineNodes.add(DocumentOutlineNode("md_${idx}_$hIdx", cleanHeading, idx))
+    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) {
+        withContext(Dispatchers.IO) {
+            pfd = descriptor
+            title = titleHint
+            val raw = FileInputStream(descriptor.fileDescriptor).bufferedReader().use { it.readText() }
+            pageTexts.clear()
+            outlineNodes.clear()
+            val lines = raw.lines()
+            val chunkSize = 42
+            lines.chunked(chunkSize).forEachIndexed { idx, chunk ->
+                pageTexts.add(chunk.joinToString("\n"))
+                chunk.filter { it.startsWith("#") }.forEachIndexed { hIdx, heading ->
+                    val cleanHeading = heading.trimStart('#', ' ')
+                    if (cleanHeading.isNotBlank()) {
+                        outlineNodes.add(DocumentOutlineNode("md_${idx}_$hIdx", cleanHeading, idx))
+                    }
                 }
             }
+            if (pageTexts.isEmpty()) pageTexts.add("")
         }
-        if (pageTexts.isEmpty()) pageTexts.add("")
     }
 
     override suspend fun getMetadata(): DocumentMetadata =
@@ -297,34 +304,36 @@ class EpubDocumentEngine(private val context: Context) : DocumentEngine {
 
     override val pageCount: Int get() = chapters.size
 
-    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) = withContext(Dispatchers.IO) {
-        pfd = descriptor
-        title = titleHint
-        chapters.clear()
-        val htmlEntries = mutableListOf<Pair<String, String>>()
-        ZipInputStream(FileInputStream(descriptor.fileDescriptor)).use { zip ->
-            var entry = zip.nextEntry
-            while (entry != null) {
-                val lower = entry.name.lowercase()
-                if (!entry.isDirectory && (lower.endsWith(".xhtml") || lower.endsWith(".html") || lower.endsWith(".htm"))) {
-                    val rawHtml = zip.readBytes().decodeToString()
-                    val plain = rawHtml
-                        .replace(Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
-                        .replace(Regex("<style[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), "")
-                        .replace(Regex("<[^>]+>"), " ")
-                        .replace(Regex("\\s+"), " ")
-                        .trim()
-                    if (plain.isNotBlank()) {
-                        htmlEntries.add(entry.name.substringAfterLast('/') to plain)
+    override suspend fun open(descriptor: ParcelFileDescriptor, titleHint: String) {
+        withContext(Dispatchers.IO) {
+            pfd = descriptor
+            title = titleHint
+            chapters.clear()
+            val htmlEntries = mutableListOf<Pair<String, String>>()
+            ZipInputStream(FileInputStream(descriptor.fileDescriptor)).use { zip ->
+                var entry = zip.nextEntry
+                while (entry != null) {
+                    val lower = entry.name.lowercase()
+                    if (!entry.isDirectory && (lower.endsWith(".xhtml") || lower.endsWith(".html") || lower.endsWith(".htm"))) {
+                        val rawHtml = zip.readBytes().decodeToString()
+                        val plain = rawHtml
+                            .replace(Regex("<script[\\s\\S]*?</script>", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("<style[\\s\\S]*?</style>", RegexOption.IGNORE_CASE), "")
+                            .replace(Regex("<[^>]+>"), " ")
+                            .replace(Regex("\\s+"), " ")
+                            .trim()
+                        if (plain.isNotBlank()) {
+                            htmlEntries.add(entry.name.substringAfterLast('/') to plain)
+                        }
                     }
+                    zip.closeEntry()
+                    entry = zip.nextEntry
                 }
-                zip.closeEntry()
-                entry = zip.nextEntry
             }
+            htmlEntries.sortBy { it.first }
+            chapters.addAll(htmlEntries)
+            if (chapters.isEmpty()) chapters.add("Cover" to "Empty EPUB document")
         }
-        htmlEntries.sortBy { it.first }
-        chapters.addAll(htmlEntries)
-        if (chapters.isEmpty()) chapters.add("Cover" to "Empty EPUB document")
     }
 
     override suspend fun getMetadata(): DocumentMetadata =

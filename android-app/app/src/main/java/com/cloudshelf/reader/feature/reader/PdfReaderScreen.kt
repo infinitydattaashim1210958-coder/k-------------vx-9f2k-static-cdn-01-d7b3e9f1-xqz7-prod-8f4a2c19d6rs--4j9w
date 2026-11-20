@@ -33,7 +33,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Redo
 import androidx.compose.material.icons.automirrored.filled.Undo
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkAdd
 import androidx.compose.material.icons.filled.Bookmarks
 import androidx.compose.material.icons.filled.Delete
@@ -41,12 +40,9 @@ import androidx.compose.material.icons.filled.Draw
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.NavigateBefore
-import androidx.compose.material.icons.filled.NavigateNext
 import androidx.compose.material.icons.filled.Print
 import androidx.compose.material.icons.filled.RotateRight
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material.icons.filled.ZoomOut
@@ -66,7 +62,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -878,8 +873,7 @@ fun PdfReaderScreen(
         }
     }
 
-    if (pendingTextAnchor != null) {
-        val (pageIdx, pair) = pendingTextAnchor!!
+    pendingTextAnchor?.let { (pageIdx, pair) ->
         val (anchor, isPopupNote) = pair
         AlertDialog(
             onDismissRequest = { pendingTextAnchor = null; textDialogInput = "" },

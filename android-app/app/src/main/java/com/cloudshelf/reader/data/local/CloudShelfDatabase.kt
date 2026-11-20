@@ -13,57 +13,47 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface LibraryDao {
-    @Query("SELECT * FROM books ORDER BY featured DESC, title ASC")
-    fun observeAllBooks(): Flow<List<BookEntity>>
+    @Query("SELECT * FROM books WHERE isAvailableInRemoteCatalogue = 1 ORDER BY featured DESC, title ASC")
+    fun observeActiveBooks(): Flow<List<BookEntity>>
 
-    @Query("SELECT * FROM books WHERE featured = 1 ORDER BY title ASC")
-    fun observeFeaturedBooks(): Flow<List<BookEntity>>
+    @Query("SELECT * FROM books WHERE id = :bookId")
+    fun observeBookById(bookId: String): Flow<BookEntity?>
 
     @Query("SELECT * FROM books WHERE id = :bookId")
     suspend fun getBookById(bookId: String): BookEntity?
-
-    @Query(
-        """
-        SELECT * FROM books
-        WHERE title LIKE '%' || :query || '%'
-           OR authorsJson LIKE '%' || :query || '%'
-           OR tagsJson LIKE '%' || :query || '%'
-           OR COALESCE(description, '') LIKE '%' || :query || '%'
-        ORDER BY featured DESC, title ASC
-        """
-    )
-    fun searchBooks(query: String): Flow<List<BookEntity>>
 
     @Query("SELECT * FROM categories ORDER BY name ASC")
     fun observeCategories(): Flow<List<CategoryEntity>>
 
     @Query(
         """
-        SELECT b.* FROM books b
-        INNER JOIN book_category_cross_ref c ON b.id = c.bookId
-        WHERE c.categoryId = :categoryId
-        ORDER BY b.title ASC
+        SELECT * FROM books
+        WHERE isAvailableInRemoteCatalogue = 1
+          AND (
+            title LIKE '%' || :query || '%'
+            OR authorsJson LIKE '%' || :query || '%'
+            OR tagsJson LIKE '%' || :query || '%'
+            OR COALESCE(description, '') LIKE '%' || :query || '%'
+          )
+        ORDER BY featured DESC, title ASC
         """
     )
-    fun observeBooksByCategory(categoryId: String): Flow<List<BookEntity>>
-
-    @Query("SELECT * FROM book_category_cross_ref")
-    fun observeAllCrossRefs(): Flow<List<BookCategoryCrossRef>>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertCategories(categories: List<CategoryEntity>)
+    fun searchBooks(query: String): Flow<List<BookEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertBooks(books: List<BookEntity>)
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertCrossRefs(crossRefs: List<BookCategoryCrossRef>)
+    suspend fun upsertCategories(categories: List<CategoryEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertCrossRefs(refs: List<BookCategoryCrossRef>)
 
     @Query("UPDATE books SET isAvailableInRemoteCatalogue = 0 WHERE id NOT IN (:activeIds)")
     suspend fun markRemovedBooksUnavailable(activeIds: List<String>)
 
     @Transaction
-    suspend fun replaceCatalogueSnapshot(
+    suspend fun syncCatalogueTransaction(
         categories: List<CategoryEntity>,
         books: List<BookEntity>,
         crossRefs: List<BookCategoryCrossRef>
